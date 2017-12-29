@@ -1,1 +1,0 @@
-["wwaldron.eggs.api.FoodPrepApiTest","wwaldron.eggs.infrastructure.InMemoryEggRepositoryTest","wwaldron.eggs.domain.RawEggTest","wwaldron.eggs.domain.FryingPanTest","wwaldron.eggs.domain.PartiallyFullyCookedEggTest","wwaldron.eggs.infrastructure.InMemoryCookRepositoryTest"]

@@ -1,8 +1,0 @@
-[0m[[0m[0minfo[0m] [0m[0m[32mFryingPanTest:[0m[0m
-[0m[[0m[0minfo[0m] [0m[0m[32madd[0m[0m
-[0m[[0m[0minfo[0m] [0m[0m[32m- should add an egg to the pan if it is empty (26 milliseconds)[0m[0m
-[0m[[0m[0minfo[0m] [0m[0m[32mcheckDoneness[0m[0m
-[0m[[0m[0minfo[0m] [0m[0m[32m- should return false if the egg is not ready (85 milliseconds)[0m[0m
-[0m[[0m[0minfo[0m] [0m[0m[32m- should return true if the egg is ready (75 milliseconds)[0m[0m
-[0m[[0m[0minfo[0m] [0m[0m[32mremove[0m[0m
-[0m[[0m[0minfo[0m] [0m[0m[32m- should return a cooked egg if there is one in the pan (73 milliseconds)[0m[0m

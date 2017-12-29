@@ -10,7 +10,7 @@ object Cook {
   case object OutOfEggsException extends IllegalStateException("There are no more eggs")
 }
 
-class Cook(val id: CookId)(foodRepository: EggRepository)(implicit ec: ExecutionContext) {
+class Cook(val id: CookId)(foodRepository: FoodRepository)(implicit ec: ExecutionContext) {
   import Cook._ //to get OutOfEggsException here
   private val fryingPan = new EmptyFryingPan()
 
