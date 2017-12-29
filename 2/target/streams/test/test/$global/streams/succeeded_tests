@@ -1,0 +1,8 @@
+#Successful Tests
+#Fri Dec 29 14:18:23 CET 2017
+wwaldron.eggs.domain.PartiallyFullyCookedEggTest=1514553503156
+wwaldron.eggs.domain.FryingPanTest=1514553503305
+wwaldron.eggs.infrastructure.InMemoryEggRepositoryTest=1514553503090
+wwaldron.eggs.domain.RawEggTest=1514553503021
+wwaldron.eggs.api.FoodPrepApiTest=1514553503141
+wwaldron.eggs.infrastructure.InMemoryCookRepositoryTest=1514553503026
