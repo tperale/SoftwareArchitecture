@@ -7,10 +7,10 @@ import scala.concurrent.{ExecutionContext, Future}
 case class CookId(value: Integer) extends AnyVal
 
 object Cook {
-  case object OutOfEggsException extends IllegalStateException("There are no more eggs")
+  case object OutOfFoodsException extends IllegalStateException("There are no more foods")
 }
 
-class Cook(val id: CookId)(foodRepository: FoodRepository)(implicit ec: ExecutionContext) {
+class Cook(val id: CookId)(orderRepository: OrderRepository)(implicit ec: ExecutionContext) {
   import Cook._ //to get OutOfEggsException here
   private val fryingPan = new EmptyFryingPan()
 
@@ -22,11 +22,11 @@ class Cook(val id: CookId)(foodRepository: FoodRepository)(implicit ec: Executio
   // Here is our accept() method for the client in the Visitor design patttern
   // The Visitor are the foods.
   // Cook is the visitable
-  def prepare(style: FoodStyle): Future[CookedFood] = {
+  def prepare(): Future[CookedFood] = {
     println("hallo")
-    foodRepository.findAndRemove().map { eggOption =>
-      val food = eggOption.getOrElse(throw OutOfEggsException)
-      val fullFryingPan = fryingPan.add(food, style)
+    orderRepository.findAndRemove().map { orderOption =>
+      val order = orderOption.getOrElse(throw OutOfFoodsException)
+      val fullFryingPan = fryingPan.add(order.food, order.style)
       wait(fullFryingPan)
       fullFryingPan.remove()._2
     }

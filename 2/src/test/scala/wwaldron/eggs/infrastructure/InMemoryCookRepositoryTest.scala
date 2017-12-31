@@ -11,8 +11,8 @@ import wwaldron.eggs.domain.Cook
 
 class InMemoryCookRepositoryTest extends FreeSpec with ScalaFutures with DomainHelpers {
   class TestContext {
-    val eggRepo = new InMemoryFoodRepository
-    val cookRepo = new InMemoryCookRepository(eggRepo)
+    val orderRepo = new InMemoryOrderRepository
+    val cookRepo = new InMemoryCookRepository(orderRepo)
   }
 
   "findCook" - {

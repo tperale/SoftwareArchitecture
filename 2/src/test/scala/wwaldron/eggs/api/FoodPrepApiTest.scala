@@ -12,11 +12,10 @@ class FoodPrepApiTest
 
   "prepareEgg" - {
     "should return a CookedEgg with the specified style" in new TestModule {
-      foodRepository.add(createRawEgg())
-
       val expectedEgg = createCookedEgg(EggStyle.SunnySideUp)
+      orderRepository.add(createOrder(createRawEgg(), EggStyle.SunnySideUp))
 
-      whenReady(foodPrepApi.prepare(EggStyle.SunnySideUp)) { egg =>
+      whenReady(foodPrepApi.prepare()) { egg =>
         assert(egg == expectedEgg)
       }
     }
@@ -24,11 +23,10 @@ class FoodPrepApiTest
 
   "prepareBacon" - {
     "should return a CookedBacon with the specified style" in new TestModule {
-      foodRepository.add(createRawBacon())
-
       val expectedBacon = createCookedBacon(BaconStyle.American)
+      orderRepository.add(createOrder(createRawBacon(), BaconStyle.American))
 
-      whenReady(foodPrepApi.prepare(BaconStyle.American)) { bacon =>
+      whenReady(foodPrepApi.prepare()) { bacon =>
         assert(bacon == expectedBacon)
       }
     }
@@ -36,27 +34,35 @@ class FoodPrepApiTest
 
   "prepareWaffle" - {
     "should return a CookedWaffle with the specified style" in new TestModule {
-      foodRepository.add(createRawWaffle())
-
       val expectedWaffle = createCookedWaffle(WaffleStyle.Brussels)
+      orderRepository.add(createOrder(createRawWaffle(), WaffleStyle.Brussels))
 
-      whenReady(foodPrepApi.prepare(WaffleStyle.Brussels)) { waffle =>
+      whenReady(foodPrepApi.prepare()) { waffle =>
         assert(waffle == expectedWaffle)
       }
     }
   }
 
-  // "prepareMixed" - {
-  //   "should return a CookedBacon with the specified style" in new TestModule {
-  //     foodRepository.add(createRawBacon())
-  //     foodRepository.add(createRawWaffle())
-  //
-  //     val expectedBacon = createCookedBacon(BaconStyle.American)
-  //
-  //     whenReady(foodPrepApi.prepare(BaconStyle.American)) { bacon =>
-  //       assert(bacon == expectedBacon)
-  //     }
-  //
-  //   }
-  // }
+  "prepareMixed" - {
+    "should return a CookedBacon with the specified style" in new TestModule {
+      orderRepository.add(createOrder(createRawBacon(), BaconStyle.American))
+      orderRepository.add(createOrder(createRawWaffle(), WaffleStyle.Brussels))
+      orderRepository.add(createOrder(createRawBacon(), BaconStyle.American))
+
+      val expectedBacon = createCookedBacon(BaconStyle.American)
+      val expectedWaffle = createCookedWaffle(WaffleStyle.Brussels)
+
+      whenReady(foodPrepApi.prepare()) { item =>
+        assert(item == expectedBacon)
+      }
+
+      whenReady(foodPrepApi.prepare()) { item =>
+        assert(item == expectedWaffle)
+      }
+
+      whenReady(foodPrepApi.prepare()) { item =>
+        assert(item == expectedBacon)
+      }
+    }
+  }
 }

@@ -1,10 +1,13 @@
 package wwaldron.eggs.domain
 
+import wwaldron.eggs.domain.Food.RawFood
 import wwaldron.eggs.domain.Egg.RawEgg
 import wwaldron.eggs.domain.Bacon.RawBacon
 import wwaldron.eggs.domain.Waffle.RawWaffle
 
 trait DomainHelpers {
+  def createOrder(food: RawFood, style: FoodStyle) = Order(food, style)
+
   // EGG
   def createRawEgg() = RawEgg()
 

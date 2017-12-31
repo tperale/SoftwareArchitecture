@@ -8,4 +8,3 @@ trait ApiModule { this: DomainModule =>
   implicit def executionContext: ExecutionContext
   val foodPrepApi: FoodPrepApi = new FoodPrepApi(cookRepository)
 }
-
