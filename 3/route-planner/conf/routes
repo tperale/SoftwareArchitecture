@@ -1,0 +1,18 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# https://www.playframework.com/documentation/latest/ScalaRouting
+# ~~~~
+
+# An example controller showing a sample home page
+GET     /                           controllers.RoutePlanner.index
+GET     /stations/:term             controllers.RoutePlanner.stations(term: String)
+
+# Route to the 'calculateConnections' action
+POST    /planner                    controllers.RoutePlanner.calculateConnections
+
+
+# JavaScript Routes
+GET     /javascriptRoutes           controllers.Application.javascriptRoutes
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)

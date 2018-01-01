@@ -1,0 +1,30 @@
+@(routeForm: Form[RouteForm.Data], connections: Seq[model.JsonModel.Connection], postURL: Call)(implicit request: MessagesRequestHeader)
+
+@main(title = "Route Planner Home") {
+
+    <img id="sncb-logo" src='@routes.Assets.versioned("images/sncb-logo.png")' alt="SNCB Logo">
+
+        @helper.form(postURL) {
+            <div id="form">
+                @helper.CSRF.formField
+                @helper.inputText(routeForm("From"), 'id -> "from", 'placeholder -> "Brussels", 'autofocus ->"")
+                @helper.inputText(routeForm("To"), 'id -> "to", 'placeholder -> "Antwerp")
+                <button> Plan route</button>
+            </div>
+        }
+
+    @* Flash shows updates to a page *@
+    @request.flash.data.map{ case (name, value) =>
+        <div id="route-info">@name: @value</div>
+    }
+
+   <div id="accordion">
+       @for(c <- connections) {
+       <h4>Route  @c.departure.time-@c.arrival.time  Duration: @c.duration mins </h4>
+       <div>
+           <p>Dep. @c.departure.time @c.departure.vehicle  @c.departure.station  Platform: @c.departure.platform </p>
+           <p>Arr. @c.arrival.time @c.arrival.vehicle  @c.arrival.station  Platform: @c.arrival.platform </p>
+       </div>
+       }
+   </div>
+}
