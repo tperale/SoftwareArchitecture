@@ -7,6 +7,8 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.libs.json._
 import play.api.libs.ws._
+import scala.concurrent.Future
+import scala.util.Try
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io
 import javax.inject.Inject
@@ -55,19 +57,28 @@ class RoutePlanner  @Inject()(cc: MessagesControllerComponents, ws: WSClient) ex
 
   }
 
-  // TODO: This will be the action that handles our form post
-  def calculateConnections() = Action { implicit request: MessagesRequest[AnyContent] =>
+  def calculateConnections() = Action.async { implicit request: MessagesRequest[AnyContent] =>
+
     connectionForm.bindFromRequest.fold(
         errors => {
             Logger.error("ERRORS: " + errors);
 
+            val futureOk = Future {  }
+            futureOk.map(i => Ok(views.html.index(form, connections, postURL)))
         },
         connectionData => {
-            Logger.info("From is: " + connectionData.From);
-            Logger.info("To is: " + connectionData.To);
+            val url = s"https://api.irail.be/connections/?from=${connectionData.From}&to=${connectionData.To}&format=json&lang=en&fast=false&typeOfTransport=trains&alerts=false&results=6"
+            val futureResponse = ws.url(url).addHttpHeaders("Accept" -> "application/json").get()
+
+            futureResponse.map { response =>
+                val result: JsValue = response.json
+                val c = (result \ "connection").get.as[Seq[Connection]]
+
+                Ok(views.html.index(form, c, postURL))
+            }
+
         }
     )
-    Ok(views.html.index(form, connections, postURL))
   }
 
 }
