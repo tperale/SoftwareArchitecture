@@ -32,11 +32,9 @@ class RoutePlanner  @Inject()(cc: MessagesControllerComponents, ws: WSClient) ex
   var stationsList = List[String]()
   private val connections = ArrayBuffer[Connection]()
 
-
   // URL to the method to calculate the connections.  You can call this directly from the template, but it
   // can be more convenient to leave the template completely stateless
   private val postURL = routes.RoutePlanner.calculateConnections()
-
 
   private val connectionForm = Form(
     mapping(
@@ -58,6 +56,7 @@ class RoutePlanner  @Inject()(cc: MessagesControllerComponents, ws: WSClient) ex
   }
 
   def calculateConnections() = Action.async { implicit request: MessagesRequest[AnyContent] =>
+    connections.clear()
 
     connectionForm.bindFromRequest.fold(
         errors => {
@@ -74,7 +73,9 @@ class RoutePlanner  @Inject()(cc: MessagesControllerComponents, ws: WSClient) ex
                 val result: JsValue = response.json
                 val c = (result \ "connection").get.as[Seq[Connection]]
 
-                Ok(views.html.index(form, c, postURL))
+                connections.appendAll(c)
+
+                Ok(views.html.index(form, connections, postURL))
             }
 
         }
