@@ -9,7 +9,7 @@ object RouteForm {
   import play.api.data.validation._
 
   val validateLocation: Constraint[String] = Constraint[String]("constraint.isastation") { o =>
-    if (isStation(o)) {
+    if (!isStation(o)) {
       Invalid(ValidationError("error.locationnotexist"))
     } else  {
       Valid
