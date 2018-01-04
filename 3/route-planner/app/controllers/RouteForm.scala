@@ -1,7 +1,6 @@
 package controllers
 
 object RouteForm {
-
   import play.api.data.Forms._
   import play.api.data.Form
 
@@ -24,7 +23,4 @@ object RouteForm {
       "To" -> nonEmptyText
     )(Data.apply)(Data.unapply)
   )
-
-
-
 }

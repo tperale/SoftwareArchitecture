@@ -18,8 +18,6 @@ import RouteForm._
 import model.JsonModel._
 import scala.collection.mutable._
 
-case class ConnectionData(From: String, To: String)
-
 /**
   * This controller creates an `Action` to handle HTTP requests to the
   * application's home page.
@@ -36,13 +34,6 @@ class RoutePlanner  @Inject()(cc: MessagesControllerComponents, ws: WSClient) ex
   // can be more convenient to leave the template completely stateless
   private val postURL = routes.RoutePlanner.calculateConnections()
 
-  private val connectionForm = Form(
-    mapping(
-      "From" -> nonEmptyText,
-      "To" -> nonEmptyText,
-    )(ConnectionData.apply)(ConnectionData.unapply)
-  )
-
   def index() = Action { implicit request: MessagesRequest[AnyContent] =>
     stationsList = io.Source.fromFile(stationsFile).getLines.toList
     Ok(views.html.index(form, connections, postURL))
@@ -58,7 +49,7 @@ class RoutePlanner  @Inject()(cc: MessagesControllerComponents, ws: WSClient) ex
   def calculateConnections() = Action.async { implicit request: MessagesRequest[AnyContent] =>
     connections.clear()
 
-    connectionForm.bindFromRequest.fold(
+    form.bindFromRequest.fold(
         errors => {
             Logger.error("ERRORS: " + errors);
 
@@ -66,7 +57,7 @@ class RoutePlanner  @Inject()(cc: MessagesControllerComponents, ws: WSClient) ex
             futureOk.map(i => Ok(views.html.index(form, connections, postURL)))
         },
         connectionData => {
-            val url = s"https://api.irail.be/connections/?from=${connectionData.From}&to=${connectionData.To}&format=json&lang=en&fast=false&typeOfTransport=trains&alerts=false&results=6"
+            val url = s"https://api.irail.be/connections/?from=${connectionData.from}&to=${connectionData.to}&format=json&lang=en&fast=false&typeOfTransport=trains&alerts=false&results=6"
             val futureResponse = ws.url(url).addHttpHeaders("Accept" -> "application/json").get()
 
             futureResponse.map { response =>
