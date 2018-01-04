@@ -15,8 +15,13 @@ import javax.inject.Inject
 
 import play.api.mvc._
 import RouteForm._
+import RouteHelper.{filter}
 import model.JsonModel._
 import scala.collection.mutable._
+
+// object RoutePlanner {
+//   def isStation(station: String)
+// }
 
 /**
   * This controller creates an `Action` to handle HTTP requests to the
@@ -24,7 +29,6 @@ import scala.collection.mutable._
   */
 @Singleton
 class RoutePlanner  @Inject()(cc: MessagesControllerComponents, ws: WSClient) extends MessagesAbstractController(cc)  {
-
   val baseRequest: WSRequest = ws.url("https://api.irail.be/connections")
   var stationsFile = Environment.simple().getFile("/public/data/stations.csv")
   var stationsList = List[String]()
@@ -41,9 +45,7 @@ class RoutePlanner  @Inject()(cc: MessagesControllerComponents, ws: WSClient) ex
 
   // This will be the action that handles our ajax request
   def stations(term: String) = Action { implicit request: Request[AnyContent] =>
-    val suggestions = stationsList.filter(_.startsWith(term))
-    Ok(Json.toJson(suggestions))
-
+    Ok(Json.toJson(filter(term)))
   }
 
   def calculateConnections() = Action.async { implicit request: MessagesRequest[AnyContent] =>

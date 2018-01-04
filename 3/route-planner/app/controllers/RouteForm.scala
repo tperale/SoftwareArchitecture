@@ -1,8 +1,20 @@
 package controllers
 
+import RouteHelper.{isStation}
+import play.api._
+
 object RouteForm {
   import play.api.data.Forms._
   import play.api.data.Form
+  import play.api.data.validation._
+
+  val validateLocation: Constraint[String] = Constraint[String]("constraint.isastation") { o =>
+    if (isStation(o)) {
+      Invalid(ValidationError("error.locationnotexist"))
+    } else  {
+      Valid
+    }
+  }
 
   /**
     * A form processing DTO that maps to the form below.
@@ -19,8 +31,8 @@ object RouteForm {
     */
   val form = Form(
     mapping(
-      "From" -> nonEmptyText,
-      "To" -> nonEmptyText
+      "From" -> text.verifying(validateLocation),
+      "To" -> text.verifying(validateLocation),
     )(Data.apply)(Data.unapply)
   )
 }
