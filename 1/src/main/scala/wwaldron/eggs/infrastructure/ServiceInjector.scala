@@ -1,6 +1,5 @@
 package wwaldron.eggs.infrastructure
 
-import wwaldron.eggs.infrastructure.{InfrastructureModule}
 import com.google.inject.{Guice, Module}
 
 trait ServiceInjector {
