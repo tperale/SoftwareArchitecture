@@ -1,0 +1,169 @@
+
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{hyperref}
+\usepackage{fullpage}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstdefinestyle{scala}{
+  frame=tb,
+  language=scala,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  frame=single,
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3,
+}
+
+\setlength{\parskip}{1.2ex}
+\begin{document}
+
+\title{Software Architecture}
+\title{Assignment 3: Using REST Connectors in SOA Architectures}
+\author{Thomas Perale -- 0546990}
+
+\maketitle
+
+\section{Introduction}
+
+For this assignment we had to implement two tasks:
+
+\begin{enumerate}
+  \item Process the JSON response from the iRails Connections REST API.
+  \item Have form validation with the Play framework approach.
+\end{enumerate}
+
+\section{API processing}
+
+For this section the first step of the solution was simply to read the
+documentation of \emph{ScalaWS} and see how to send a \emph{GET HTTP Request} which
+basically translate to this snippet of code in \emph{Scala}.
+
+\begin{lstlisting}[style=scala]
+val url = s"https://api.irail.be/connections/?from=${connectionData.from}&to=${connectionData.to}"
+val futureResponse = ws.url(url).addHttpHeaders("Accept" -> "application/json").get()
+\end{lstlisting}
+
+Where \emph{connectionData} are the form datas from \emph{RouteForm.Data} object
+which I will talk later.
+
+To handle the reception of the API's datas we transform directly the response
+into a \emph{Sequence} of \emph{Connection} object defined on the \emph{JsonModel.scala}
+file with the following code.
+
+\begin{lstlisting}[style=scala]
+futureResponse.map { response =>
+  val result: JsValue = response.json
+  val c = (result \ "connection").get.as[Seq[Connection]]
+
+  connections.appendAll(c)
+
+  Ok(views.html.index(form, connections, postURL))
+}
+\end{lstlisting}
+
+The application can automatically make the translation from \emph{JsonResult}
+to \emph{Connection} object. To do it I had to define \emph{Json Readers} like
+this.
+
+\begin{lstlisting}[style=scala]
+case class Connection(id: String, departure: Departure, arrival: Arrival, duration: String)
+object Connection {
+    implicit val readsConnection: Reads[Connection] = new Reads[Connection] {
+        def reads(json: JsValue): JsResult[Connection] = {
+            for {
+              id <- (json \ "id").validate[String]
+              departure <- (json \ "departure").validate[Departure]
+              arrival <- (json \ "arrival").validate[Arrival]
+              duration <- (json \ "duration").validate[String]
+            } yield Connection(id, departure, arrival, duration)
+        }
+    }
+}
+case class Departure(station: String, time: String, vehicle: String, platform: String  )
+object Departure {
+    implicit val readsDeparture: Reads[Departure] = new Reads[Departure] {
+        def reads(json: JsValue): JsResult[Departure] = {
+            for {
+              station <- (json \ "station").validate[String]
+              time <- (json \ "time").validate[String]
+              vehicule <- (json \ "vehicle").validate[String]
+              platform <- (json \ "platform").validate[String]
+            } yield Departure(station, time, vehicule, platform)
+        }
+    }
+}
+case class Arrival(station: String, time: String, vehicle: String, platform: String)
+object Arrival {
+    implicit val readsArrival: Reads[Arrival] = new Reads[Arrival] {
+        def reads(json: JsValue): JsResult[Arrival] = {
+            for {
+              station <- (json \ "station").validate[String]
+              time <- (json \ "time").validate[String]
+              vehicule <- (json \ "vehicle").validate[String]
+              platform <- (json \ "platform").validate[String]
+            } yield Arrival(station, time, vehicule, platform)
+        }
+    }
+}
+\end{lstlisting}
+
+And those were the first requirements for the project.
+
+\section{Form validation}
+
+The second requirements consisted in handling the forms datas to only accept
+stations defined in the \emph{.csv} provided in the projet.
+
+For this purpose we defined a \emph{Form} definition with customs \emph{validators}
+to describe the informations the user send from the webapp.
+
+\begin{lstlisting}[style=scala]
+val validateLocation: Constraint[String] = Constraint[String]("constraint.isastation") { o =>
+  if (!isStation(o)) {
+    // Check if is defined in the csv provided.
+    Invalid(ValidationError("error.locationnotexist"))
+  } else  {
+    Valid
+  }
+}
+
+case class Data(from: String, to: String)
+
+val form = Form(
+  mapping(
+    "From" -> text.verifying(validateLocation),
+    "To" -> text.verifying(validateLocation),
+  )(Data.apply)(Data.unapply)
+)
+\end{lstlisting}
+
+We get the data in an \emph{Action} by calling the following method
+
+\begin{lstlisting}[style=scala]
+form.bindFromRequest.fold
+\end{lstlisting}
+
+\bibliographystyle{apalike}
+
+\bibliography{bib}
+\end{document}
