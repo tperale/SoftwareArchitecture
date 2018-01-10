@@ -1,0 +1,167 @@
+
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{hyperref}
+\usepackage{fullpage}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstdefinestyle{scala}{
+  frame=tb,
+  language=scala,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  frame=single,
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3,
+}
+
+\setlength{\parskip}{1.2ex}
+\begin{document}
+
+\title{}
+\title{Software Architecture\\Assignment 1: DDD Onion Architectural Pattern}
+\author{Thomas Perale -- 0546990}
+
+\maketitle
+
+The goal of this assignment was to replace the \emph{Cake Pattern} structure
+with \emph{Google Guice} for dependency injection.
+
+To achieve it we first had to find the parts of the code where the \emph{Cake Pattern}
+was used. The \emph{ApiModule.scala} file is the class that need \emph{Dependency Injection}
+of two class \emph{CookRepository} and \emph{EggRepository} defined in the
+\emph{DomainModule} trait.
+
+\begin{lstlisting}[style=scala]
+trait DomainModule {
+  def cookRepository: CookRepository
+  def eggRepository: EggRepository
+}
+
+trait ApiModule { this: DomainModule =>
+  implicit def executionContext: ExecutionContext
+  val foodPrepApi: FoodPrepApi = new FoodPrepApi(cookRepository)
+}
+\end{lstlisting}
+
+The actual \emph{Dependency Injection} was done in the \emph{InfrastructureModule.scala}
+
+\begin{lstlisting}[style=scala]
+trait InfrastructureModule { this: ApiModule with DomainModule =>
+  override val eggRepository: EggRepository = new InMemoryEggRepository()
+
+  override val cookRepository: CookRepository = new InMemoryCookRepository(eggRepository)
+
+  override implicit def executionContext: ExecutionContext = scala.concurrent.ExecutionContext.global
+}
+\end{lstlisting}
+
+So changing the structure of the code to use \emph{Google Guice} actually make the
+\emph{DomainModule} class useless and we can therefore remove it from the application.
+Instead I did my injection of the two class needed (\emph{CookRepository} and
+\emph{EggRepository}) directly into the \emph{ApiModule} class.
+
+\begin{lstlisting}[style=scala]
+class ApiModule @Inject()(eggRepository: EggRepository, cookRepository: CookRepository)
+\end{lstlisting}
+
+And also \emph{Inject} into the dependencies we inject into \emph{ApiModule}.
+
+\begin{lstlisting}[style=scala]
+class InMemoryEggRepository @Inject()()(implicit ec: ExecutionContext) extends EggRepository
+
+class InMemoryCookRepository @Inject()(eggRepository: EggRepository)(implicit ec: ExecutionContext) extends CookRepository
+\end{lstlisting}
+
+And create the bindings for \emph{Google Guice} into the \emph{InfrastructureModule}
+class we completely changed.
+
+\begin{lstlisting}[style=scala]
+class InfrastructureModule extends Module {
+  def configure(binder: Binder) = {
+    binder.bind(classof[EggRepository]).to(classof[InMemoryEggRepository])
+    binder.bind(classof[CookRepository]).to(classof[InmemoryCookRepository])
+  }
+}
+\end{lstlisting}
+
+So now to create an \emph{ApiModule} instance we do it this way
+
+\begin{lstlisting}[style=scala]
+trait Injector {
+  Injector.inject(this)
+}
+
+object Injector {
+  val injector = Guice.createInjector(new InfrastructureModule())
+
+  def inject(obj: AnyRef) {
+    injector.injectMembers(obj)
+  }
+}
+
+val a: ApiModule = Injector.injector.getInstance(classOf[ApiModule])
+\end{lstlisting}
+
+The problem with this implementation is the \emph{EggRepository} instance
+in \emph{ApiModule} and \emph{InMemoryCookRepository} are not the same. As we
+see in the \emph{FoodPrepApiTest} test use \emph{EggRepository} directly to add
+egg in the repository and then use the \emph{CookRepository} as if the eggs were
+in the repository. To solve this issue I used \emph{Guice} \emph{AssistedInject}
+to create a \emph{factory} for the \emph{CookRepository} dependency and choose
+which \emph{EggRepository} instance to use.
+
+\begin{lstlisting}[style=scala]
+class InMemoryCookRepository @Inject()(
+  @Assisted eggRepository: EggRepository
+)(implicit ec: ExecutionContext) extends CookRepository
+
+trait CookRepositoryFactory {
+  def create(eggRepository: EggRepository): CookRepository
+}
+
+class InfrastructureModule extends Module {
+  def configure(binder: Binder) = {
+    binder.bind(classOf[EggRepository]).to(classOf[InMemoryEggRepository])
+    binder.install(new FactoryModuleBuilder()
+      .implement(classOf[CookRepository], classOf[InMemoryCookRepository])
+      .build(classOf[CookRepositoryFactory]))
+  }
+}
+\end{lstlisting}
+
+And inject it in \emph{ApiModule} this way.
+
+\begin{lstlisting}[style=scala]
+class ApiModule @Inject()(eggRepo: EggRepository, cookRepo: CookRepositoryFactory) {
+  val eggRepository: EggRepository = eggRepo
+  val cookRepository: CookRepository = cookRepo.create(eggRepo)
+}
+\end{lstlisting}
+
+Si I only had to change the way I created the \emph{ApiModule} instance in the tests
+and that was all, the \emph{Dependency Injection} worked perfectly.
+
+\bibliographystyle{apalike}
+
+\bibliography{bib}
+\end{document}
