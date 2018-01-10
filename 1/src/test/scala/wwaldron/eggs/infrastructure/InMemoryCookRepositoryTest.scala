@@ -7,18 +7,13 @@ import org.scalatest.time.SpanSugar._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import wwaldron.eggs.domain.Cook
+import wwaldron.eggs.api.ApiModule
 
 class InMemoryCookRepositoryTest extends FreeSpec with ScalaFutures with DomainHelpers {
-  class TestContext {
-    val eggRepo = new InMemoryEggRepository
-    val cookRepo = new InMemoryCookRepository(eggRepo)
-  }
-  
   "findCook" - {
-    "should eventually return a cook" in new TestContext {
-      cookRepo.findOne().isReadyWithin(500 millis)
+    "should eventually return a cook" in {
+      val a: ApiModule = Injector.injector.getInstance(classOf[ApiModule])
+      a.cookRepository.findOne().isReadyWithin(500 millis)
     }
   }
-  
 }

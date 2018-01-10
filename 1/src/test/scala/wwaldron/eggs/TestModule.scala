@@ -1,7 +1,8 @@
 package wwaldron.eggs
 
 import wwaldron.eggs.api.ApiModule
-import wwaldron.eggs.domain.DomainModule
-import wwaldron.eggs.infrastructure.ServiceInjector
+// import wwaldron.eggs.domain.DomainModule
+// import wwaldron.eggs.infrastructure.InfrastructureModule
+import scala.concurrent.ExecutionContext
 
-class TestModule extends DomainModule with ServiceInjector with ApiModule
+trait TestModule extends ApiModule

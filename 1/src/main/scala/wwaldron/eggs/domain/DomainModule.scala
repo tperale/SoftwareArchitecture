@@ -1,6 +1,8 @@
 package wwaldron.eggs.domain
 
-trait DomainModule {
-  def cookRepository: CookRepository
-  def eggRepository: EggRepository
+import com.google.inject.Inject
+
+class DomainModule {
+  @Inject val cookRepository: CookRepository = null
+  @Inject val eggRepository: EggRepository = null
 }
