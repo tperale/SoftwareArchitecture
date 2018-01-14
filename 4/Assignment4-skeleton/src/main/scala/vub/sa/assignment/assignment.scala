@@ -7,14 +7,11 @@ case class PhotoMessage(licensePlate : String, speed : Int)
 
 class CameraActor(nextFilter: ActorRef) extends Actor {
   override def receive: Receive = {
-    case PhotoMessage(licence: String, speed: Int) =>
+    case PhotoMessage(license: String, speed: Int) =>
       //send message every 30 seconds
-      println(licence)
-      println(speed)
-      nextFilter ! PhotoMessage(licence, speed)
+      nextFilter ! PhotoMessage(license, speed)
     case _ =>
-      println("error") // ERROR
-      context.stop(self)
+      println("[error] In the message structure sended") // ERROR
   }
 }
 
@@ -22,16 +19,16 @@ class LicenseFilterActor(nextFilter: ActorRef) extends Actor {
   override def receive: Receive = {
     case PhotoMessage("", speed: Int) =>
       // We have to halt here (exception or halt ?)
-      context.stop(self)
+      println("[error] No plate found by the camera")
 
     case PhotoMessage(null, speed: Int) =>
       // We have to halt here (exception or halt ?)
-      context.stop(self)
+      println("[error] No plate found by the camera")
 
-    case PhotoMessage(licence: String, speed: Int) =>
+    case PhotoMessage(license: String, speed: Int) =>
       // If we arrive here we have a possible infraction because the car
       // license exist so we have to continue to the next filter.
-      nextFilter ! (licence, speed)
+      nextFilter ! PhotoMessage(license, speed)
   }
 }
 
@@ -40,27 +37,45 @@ class SpeedFilterActor(nextFilter: ActorRef) extends Actor {
   val errormsg: String = "Invalid message, dropped..."
 
   override def receive: Receive = {
-    case PhotoMessage(licence: String, speed: Int) => if (speed < 70) {
+    case PhotoMessage(license: String, speed: Int) => if (speed < 70) {
       // If the speed is below the limit we have to halt or throw exception
-      context.stop(self)
+      println(s"[info] vehicule is running below the speed limit (here ${speed} km/h), disgarding")
     }
     else {
       // We proceed incase it's an infraction case.
-      nextFilter ! PhotoMessage(licence, speed)
+      nextFilter ! PhotoMessage(license, speed)
     }
   }
 }
 
 class CPOfficeActor extends Actor {
   override def receive: Receive = {
-    case PhotoMessage(licence: String, speed: Int) =>
+    case PhotoMessage(license: String, speed: Int) =>
       // If we get till here we have an infraction
-      // println("Infraction by car with plate " + licence + ", for speeding at " + speed + " km/h has been processed")
-      // sender() ! "Proecessed Infraction"
-      context.stop(self)
+      println(s"[info] Infraction detected for car plate ${license} running at ${speed} km/h")
   }
 }
 
+object PlateGenerator {
+  val random = new scala.util.Random
+
+  val MIN_SPEED = 55
+  val MAX_SPEED = 95
+
+  val PLATE_LENGTH = 6
+
+  def generateSpeed: Int = {
+    return MIN_SPEED + random.nextInt(MAX_SPEED - MIN_SPEED + 1)
+  }
+
+  def generatePlate: String = {
+    return {random.alphanumeric take PLATE_LENGTH mkString}
+  }
+
+  def generate: PhotoMessage = {
+    return new PhotoMessage(generatePlate, generateSpeed)
+  }
+}
 
 object assignment extends App {
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -71,10 +86,7 @@ object assignment extends App {
   val speedfilter = system.actorOf(Props(classOf[SpeedFilterActor], licensefilter), "speedfilter")
   val camera = system.actorOf(Props(classOf[CameraActor], speedfilter), "camera")
 
-  system.scheduler.schedule(
-    0 seconds,
-    30 seconds,
-    camera,
-    ("12345", 57)
-  )
+  system.scheduler.schedule(0 second, 30 second) {
+     camera ! PlateGenerator.generate
+  }
 }
