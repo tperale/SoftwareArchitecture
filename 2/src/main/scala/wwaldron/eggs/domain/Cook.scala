@@ -19,11 +19,7 @@ class Cook(val id: CookId)(orderRepository: OrderRepository)(implicit ec: Execut
       Thread.sleep(10)
   }
 
-  // Here is our accept() method for the client in the Visitor design patttern
-  // The Visitor are the foods.
-  // Cook is the visitable
   def prepare(): Future[CookedFood] = {
-    println("hallo")
     orderRepository.findAndRemove().map { orderOption =>
       val order = orderOption.getOrElse(throw OutOfFoodsException)
       val fullFryingPan = fryingPan.add(order.food, order.style)
