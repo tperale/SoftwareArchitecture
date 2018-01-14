@@ -1,0 +1,180 @@
+
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{hyperref}
+\usepackage{fullpage}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstdefinestyle{scala}{
+  frame=tb,
+  language=scala,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  frame=single,
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3,
+}
+
+\setlength{\parskip}{1.2ex}
+\begin{document}
+
+\title{Software Architecture}
+\title{Assignment 4: Design patterns for micro-service architectures}
+\author{Thomas Perale -- 0546990}
+
+\maketitle
+
+\section{Introduction}
+
+For this assignment we had to implement an \emph{Actor System} that
+enable the use of filters on messages passed to the actors.
+
+The filter actors we needed to implement was
+
+\begin{enumerate}
+  \item A license filter disregarding messages if the plate was \emph{null}.
+  \item A speed filter disregarding messages if the speed was within the speed limit.
+\end{enumerate}
+
+If a \emph{message} pass through those filters it mean the \emph{vehicule} From
+which originated the \emph{message} made an infraction.
+
+To simulate the system we needed to schedule every 30 seconds a new message
+with a random plate and a random speed.
+
+\section{Ramdom message generation}
+
+The first step of the project is generating the messages we pass through the
+\emph{Actors}.
+
+\begin{lstlisting}[style=scala]
+case class PhotoMessage(licensePlate : String, speed : Int)
+
+object PlateGenerator {
+  val random = new scala.util.Random
+
+  val MIN_SPEED = 55
+  val MAX_SPEED = 95
+
+  val PLATE_LENGTH = 6
+
+  def generateSpeed: Int = {
+    return MIN_SPEED + random.nextInt(MAX_SPEED - MIN_SPEED + 1)
+  }
+
+  def generatePlate: String = {
+    return {random.alphanumeric take PLATE_LENGTH mkString}
+  }
+
+  def generate: PhotoMessage = {
+    return new PhotoMessage(generatePlate, generateSpeed)
+  }
+}
+\end{lstlisting}
+
+We didn't have any restriction on the plate format so I choosed an arbitrary one,
+consisting of 6 alphanumeric characters.
+
+We then needed to implement the \emph{Actors} as presented in the assignment
+template.
+
+\begin{lstlisting}[style=scala]
+class CameraActor(nextFilter: ActorRef) extends Actor {
+  override def receive: Receive = {
+    case PhotoMessage(license: String, speed: Int) =>
+      //send message every 30 seconds
+      nextFilter ! PhotoMessage(license, speed)
+    case _ =>
+      println("[error] In the message structure sended") // ERROR
+  }
+}
+
+class LicenseFilterActor(nextFilter: ActorRef) extends Actor {
+  override def receive: Receive = {
+    case PhotoMessage("", speed: Int) =>
+      // We have to halt here (exception or halt ?)
+      println("[error] No plate found by the camera")
+
+    case PhotoMessage(null, speed: Int) =>
+      // We have to halt here (exception or halt ?)
+      println("[error] No plate found by the camera")
+
+    case PhotoMessage(license: String, speed: Int) =>
+      // If we arrive here we have a possible infraction because the car
+      // license exist so we have to continue to the next filter.
+      nextFilter ! PhotoMessage(license, speed)
+  }
+}
+
+class SpeedFilterActor(nextFilter: ActorRef) extends Actor {
+  val errormsg: String = "Invalid message, dropped..."
+
+  override def receive: Receive = {
+    case PhotoMessage(license: String, speed: Int) => if (speed < 70) {
+      // If the speed is below the limit we have to halt or throw exception
+      println(s"[info] vehicule is running below the speed limit (here ${speed} km/h), disgarding")
+    }
+    else {
+      // We proceed incase it's an infraction case.
+      nextFilter ! PhotoMessage(license, speed)
+    }
+  }
+}
+
+class CPOfficeActor extends Actor {
+  override def receive: Receive = {
+    case PhotoMessage(license: String, speed: Int) =>
+      // If we get till here we have an infraction
+      println(s"[info] Infraction detected for car plate ${license} running at ${speed} km/h")
+  }
+}
+\end{lstlisting}
+
+We take care to stop the message passing when the \emph{License Plate} don't exist
+or when the \emph{speed} is actually below the speed limit.
+
+In the case the message reach the \emph{CPOfficeActor} we just print we have an
+infraction but don't do anything special as nothing was told in the assignment.
+
+Lastly to chain the different actors together and send a message every 30 seconds
+we implement the \emph{assignment} object.
+
+\begin{lstlisting}[style=scala]
+object assignment extends App {
+  import scala.concurrent.ExecutionContext.Implicits.global
+
+  val system = ActorSystem("Assignment4")
+  val cpoffice = system.actorOf(Props[CPOfficeActor], "cpoffice")
+  val licensefilter = system.actorOf(Props(classOf[LicenseFilterActor], cpoffice), "licensefilter")
+  val speedfilter = system.actorOf(Props(classOf[SpeedFilterActor], licensefilter), "speedfilter")
+  val camera = system.actorOf(Props(classOf[CameraActor], speedfilter), "camera")
+
+  system.scheduler.schedule(0 second, 30 second) {
+     camera ! PlateGenerator.generate
+  }
+}
+\end{lstlisting}
+
+\bibliographystyle{apalike}
+
+\bibliography{bib}
+\end{document}
