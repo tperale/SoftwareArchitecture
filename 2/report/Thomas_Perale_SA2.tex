@@ -1,0 +1,176 @@
+
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{cite}
+\usepackage{hyperref}
+\usepackage{fullpage}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstdefinestyle{scala}{
+  frame=tb,
+  language=scala,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  frame=single,
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3,
+}
+
+\setlength{\parskip}{1.2ex}
+\begin{document}
+
+\title{Software Architecture}
+\title{Assignment 2: Using the Visitor pattern}
+\author{Thomas Perale -- 0546990}
+
+\maketitle
+
+\section{Introduction}
+
+For this assignment we need to extend the \emph{Cook} class of the
+first assignment project to use the \emph{Visitor} design pattern in
+order to support receiving a list of orders to prepare.
+
+\section{Changing the Cook class}
+
+We want to match the \emph{Visitor} pattern as much as possible but we also want
+to keep the original structure of the program. So we have to keep in mind our ultimate
+goal is to be able to pass an \emph{order list} to the \emph{Cook} class letting
+it handle any type of \emph{Food} and \emph{FoodStyle}. For this purpose I made
+a \emph{Order} class
+
+\begin{lstlisting}[style=scala]
+case class Order(food: RawFood, style: FoodStyle)
+\end{lstlisting}
+
+Letting you to match a new \emph{Food} type with its specific \emph{FoodStyle}.
+
+The \emph{Cook} class no longer accept \emph{EggRepository} only but \emph{OrderRepository}
+which are the sames implementations.
+
+\begin{lstlisting}[style=scala]
+class Cook(val id: CookId)(orderRepository: OrderRepository)(implicit ec: ExecutionContext) {
+  import Cook._ //to get OutOfEggsException here
+  private val fryingPan = new EmptyFryingPan()
+
+  private def wait(pan: FullFryingPan) = {
+    while(!pan.checkDoneness())
+      Thread.sleep(10)
+  }
+
+  def prepare(): Future[CookedFood] = {
+    orderRepository.findAndRemove().map { orderOption =>
+      val order = orderOption.getOrElse(throw OutOfFoodsException)
+      val fullFryingPan = fryingPan.add(order.food, order.style)
+      wait(fullFryingPan)
+      fullFryingPan.remove()._2
+    }
+  }
+}
+\end{lstlisting}
+
+So the big change is the creation of the \emph{Food} class to not limit the foods
+we prepare to eggs.
+
+\begin{lstlisting}[style=scala]
+trait Food
+
+object Food extends Food {
+  trait CookedFood {
+    def style: FoodStyle
+  }
+  trait RawFood {
+    def startCooking(style: FoodStyle): PartiallyCookedFood
+  }
+  trait PartiallyCookedFood extends CookedFood {
+    def isDone: Boolean
+    def finishCooking(): CookedFood
+  }
+  trait FullyCookedFood extends CookedFood
+}
+\end{lstlisting}
+
+Which is implemented in specific food classes. Here is an example for the
+\emph{Bacon}.
+
+\begin{lstlisting}[style=scala]
+sealed trait Bacon
+
+object Bacon {
+  sealed trait CookedBacon extends CookedFood {
+    def style: BaconStyle
+  }
+
+  case class RawBacon() extends RawFood {
+    def startCooking(style: FoodStyle): PartiallyCookedBacon =
+      PartiallyCookedBacon(style)
+  }
+
+  case class PartiallyCookedBacon(style: FoodStyle) extends PartiallyCookedFood {
+    private val startTime: Timestamp = Timestamp()
+    def isDone: Boolean =
+      (System.currentTimeMillis() - startTime.value) > style.cookTime.toMillis
+
+    def finishCooking(): CookedFood =
+      if(isDone) FullyCookedBacon(style) else this
+  }
+
+  case class FullyCookedBacon(style: FoodStyle) extends FullyCookedFood
+}
+\end{lstlisting}
+
+I do something similar for the \emph{Style} class to define specific \emph{FoodStyle}
+for specific \emph{Food}
+
+\begin{lstlisting}[style=scala]
+trait FoodStyle {
+  def cookTime = 20.millis
+}
+
+sealed trait BaconStyle extends FoodStyle
+object BaconStyle {
+  case object American extends BaconStyle
+  case object Candied extends BaconStyle
+  case object Applewood extends BaconStyle
+}
+\end{lstlisting}
+
+Order are prepared one at a time everytime you call \emph{.prepare()} on a
+you prepare an order. We can see the test to see how to use the new implementation
+in more details.
+
+\begin{lstlisting}[style=scala]
+orderRepository.add(createOrder(createRawBacon(), BaconStyle.American))
+orderRepository.add(createOrder(createRawWaffle(), WaffleStyle.Brussels))
+orderRepository.add(createOrder(createRawBacon(), BaconStyle.American))
+
+val expectedBacon = createCookedBacon(BaconStyle.American)
+val expectedWaffle = createCookedWaffle(WaffleStyle.Brussels)
+
+whenReady(foodPrepApi.prepare()) { item =>
+  assert(item == expectedBacon)
+}
+\end{lstlisting}
+
+\bibliographystyle{apalike}
+
+\bibliography{bib}
+\end{document}

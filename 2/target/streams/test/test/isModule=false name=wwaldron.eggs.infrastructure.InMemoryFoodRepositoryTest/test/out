@@ -1,6 +1,0 @@
-[0m[[0m[0minfo[0m] [0m[0m[32mInMemoryFoodRepositoryTest:[0m[0m
-[0m[[0m[0minfo[0m] [0m[0m[32madd[0m[0m
-[0m[[0m[0minfo[0m] [0m[0m[32m- should add an egg to the repo (210 milliseconds)[0m[0m
-[0m[[0m[0minfo[0m] [0m[0m[32mfindAndRemove[0m[0m
-[0m[[0m[0minfo[0m] [0m[0m[32m- should return None if there are no eggs in the repo (3 milliseconds)[0m[0m
-[0m[[0m[0minfo[0m] [0m[0m[32m- should continue to return eggs as long as they are in the repo. (85 milliseconds)[0m[0m
